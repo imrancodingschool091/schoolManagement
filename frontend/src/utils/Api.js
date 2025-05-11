@@ -15,15 +15,36 @@ const api = axios.create({
 // Request interceptor to add token if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers['x-auth-token'] = token;
+  if (token) {
+    // Add Bearer prefix to the token
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   return config;
-}, Promise.reject);
+}, (error) => {
+  return Promise.reject(error);
+});
 
 // Global error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error(error.response?.status || 'Request error');
+    if (error.response) {
+      // Handle specific status codes
+      if (error.response.status === 401) {
+        // Token expired or invalid
+        console.error('Authentication error:', error.response.data);
+        // Optionally: clear token and redirect to login
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+      console.error(`API Error [${error.response.status}]:`, error.response.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+    } else {
+      // Something happened in setting up the request
+      console.error('Request setup error:', error.message);
+    }
     return Promise.reject(error);
   }
 );

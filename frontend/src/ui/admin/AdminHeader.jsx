@@ -41,7 +41,7 @@ const AdminDashboard = () => {
       title: 'Manage Office Staff & Librarians',
       desc: 'Control user access and manage staff.',
       iconColor: 'bg-purple-600',
-      path: '/dashboard/admin/staffs',
+      path: '/dashboard/admin/staff',
     },
   ];
 

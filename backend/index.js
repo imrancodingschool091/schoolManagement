@@ -27,7 +27,7 @@ app.use(express.json());
 
 
 app.get("/",(req,res)=>{
-  res.send("hello from imran")
+  res.send("api is working..")
 })
 
 connectDb()

@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { updateStudent, fetchStudentById, clearStudentError } from '../../features/students/studentsSlice';
 import Header from '../../common/Header';
-import { handleSuccess } from '../../utils/Message';
+import { handleSuccess, handleError } from '../../utils/Message';
 
 function Edit() {
   const dispatch = useDispatch();
@@ -35,6 +35,26 @@ function Edit() {
     }
   });
 
+  const [errors, setErrors] = useState({
+    name: '',
+    rollNumber: '',
+    class: '',
+    section: '',
+    dateOfBirth: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    },
+    parentDetails: {
+      fatherName: '',
+      motherName: '',
+      contactNumber: ''
+    }
+  });
+
   // Load student data when component mounts or ID changes
   useEffect(() => {
     dispatch(fetchStudentById(id));
@@ -47,15 +67,9 @@ function Edit() {
   // Update form data when currentStudent changes
   useEffect(() => {
     if (currentStudent) {
-      setFormData({
-        name: currentStudent.name || '',
-        rollNumber: currentStudent.rollNumber || '',
-        class: currentStudent.class || '',
-        section: currentStudent.section || 'A',
-        dateOfBirth: currentStudent.dateOfBirth?.split('T')[0] || '',
-        gender: currentStudent.gender || 'Male',
-        feesStatus: currentStudent.feesStatus || 'Pending',
-        active: currentStudent.active !== undefined ? currentStudent.active : true,
+      const formattedStudent = {
+        ...currentStudent,
+        dateOfBirth: currentStudent.dateOfBirth ? new Date(currentStudent.dateOfBirth).toISOString().split('T')[0] : '',
         address: {
           street: currentStudent.address?.street || '',
           city: currentStudent.address?.city || 'Delhi',
@@ -68,14 +82,105 @@ function Edit() {
           motherName: currentStudent.parentDetails?.motherName || '',
           contactNumber: currentStudent.parentDetails?.contactNumber || ''
         }
-      });
+      };
+      setFormData(formattedStudent);
     }
   }, [currentStudent]);
+
+  // Validate date of birth (must be at least 5 years old)
+  const validateDateOfBirth = (date) => {
+    if (!date) return 'Date of birth is required';
+    const dob = new Date(date);
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate());
+    return dob <= minDate ? '' : 'Student must be at least 5 years old';
+  };
+
+  // Validate postal code (basic Indian postal code validation)
+  const validatePostalCode = (code) => {
+    if (!code) return 'Postal code is required';
+    return /^[1-9][0-9]{5}$/.test(code) ? '' : 'Invalid postal code (must be 6 digits)';
+  };
+
+  // Validate contact number (10 digits)
+  const validateContactNumber = (number) => {
+    if (!number) return 'Contact number is required';
+    return /^[0-9]{10}$/.test(number) ? '' : 'Invalid contact number (must be 10 digits)';
+  };
+
+  // Validate name (letters and spaces only)
+  const validateName = (name) => {
+    if (!name.trim()) return 'Name is required';
+    if (!/^[a-zA-Z\s]+$/.test(name)) return 'Name can only contain letters and spaces';
+    if (name.length > 50) return 'Name cannot exceed 50 characters';
+    return '';
+  };
+
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'name':
+        return validateName(value);
+      case 'rollNumber':
+        if (!value.trim()) return 'Roll number is required';
+        if (value.length > 20) return 'Roll number cannot exceed 20 characters';
+        return '';
+      case 'class':
+        return !value ? 'Class is required' : '';
+      case 'section':
+        return !value ? 'Section is required' : '';
+      case 'dateOfBirth':
+        return validateDateOfBirth(value);
+      case 'address.street':
+        if (!value.trim()) return 'Street address is required';
+        if (value.length > 100) return 'Street address cannot exceed 100 characters';
+        return '';
+      case 'address.postalCode':
+        return validatePostalCode(value);
+      case 'address.city':
+        return !value.trim() ? 'City is required' : '';
+      case 'address.state':
+        return !value.trim() ? 'State is required' : '';
+      case 'address.country':
+        return !value.trim() ? 'Country is required' : '';
+      case 'parentDetails.fatherName':
+        if (!value.trim()) return "Father's name is required";
+        if (!/^[a-zA-Z\s]+$/.test(value)) return "Father's name can only contain letters and spaces";
+        if (value.length > 50) return "Father's name cannot exceed 50 characters";
+        return '';
+      case 'parentDetails.motherName':
+        if (!value.trim()) return "Mother's name is required";
+        if (!/^[a-zA-Z\s]+$/.test(value)) return "Mother's name can only contain letters and spaces";
+        if (value.length > 50) return "Mother's name cannot exceed 50 characters";
+        return '';
+      case 'parentDetails.contactNumber':
+        return validateContactNumber(value);
+      default:
+        return '';
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const inputValue = type === 'checkbox' ? checked : value;
     
+    // Clear previous error for this field
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setErrors(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: ''
+        }
+      }));
+    } else {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
+    // Update form data
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
@@ -93,15 +198,101 @@ function Edit() {
     }
   };
 
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    const error = validateField(name, value);
+    
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setErrors(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: error
+        }
+      }));
+    } else {
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+    
+    // Validate top-level fields
+    const topLevelFields = ['name', 'rollNumber', 'class', 'section', 'dateOfBirth'];
+    topLevelFields.forEach(field => {
+      const error = validateField(field, formData[field]);
+      newErrors[field] = error;
+      if (error) isValid = false;
+    });
+    
+    // Validate address fields
+    const addressFields = ['street', 'city', 'state', 'postalCode', 'country'];
+    addressFields.forEach(field => {
+      const error = validateField(`address.${field}`, formData.address[field]);
+      newErrors.address[field] = error;
+      if (error) isValid = false;
+    });
+    
+    // Validate parent details
+    const parentFields = ['fatherName', 'motherName', 'contactNumber'];
+    parentFields.forEach(field => {
+      const error = validateField(`parentDetails.${field}`, formData.parentDetails[field]);
+      newErrors.parentDetails[field] = error;
+      if (error) isValid = false;
+    });
+    
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      handleError("Please fix the errors in the form");
+      return;
+    }
+    
     try {
       await dispatch(updateStudent({ id, studentData: formData })).unwrap();
       handleSuccess("Student updated successfully!");
       navigate("/dashboard/admin/students");
     } catch (error) {
       console.error('Failed to update student:', error);
+      handleError(error.message || "Failed to update student");
     }
+  };
+
+  // Helper function to check if a field has an error
+  const hasError = (fieldPath) => {
+    const parts = fieldPath.split('.');
+    let value = errors;
+    
+    for (const part of parts) {
+      if (value[part] === undefined) return false;
+      value = value[part];
+    }
+    
+    return Boolean(value);
+  };
+
+  // Helper function to get error message
+  const getError = (fieldPath) => {
+    const parts = fieldPath.split('.');
+    let value = errors;
+    
+    for (const part of parts) {
+      if (value[part] === undefined) return '';
+      value = value[part];
+    }
+    
+    return value;
   };
 
   if (loading && !currentStudent) {
@@ -197,7 +388,7 @@ function Edit() {
             )}
 
             {/* Student Form */}
-            <form onSubmit={handleSubmit} className="divide-y divide-gray-200">
+            <form onSubmit={handleSubmit} className="divide-y divide-gray-200" noValidate>
               {/* Basic Information */}
               <div className="px-6 py-5 space-y-6">
                 <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
@@ -212,9 +403,13 @@ function Edit() {
                       id="name"
                       value={formData.name}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('name') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('name') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('name')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -227,9 +422,13 @@ function Edit() {
                       id="rollNumber"
                       value={formData.rollNumber}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('rollNumber') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('rollNumber') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('rollNumber')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -241,7 +440,8 @@ function Edit() {
                       name="class"
                       value={formData.class}
                       onChange={handleChange}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full pl-3 pr-10 py-2 text-base ${hasError('class') ? 'border-red-300' : 'border-gray-300'} focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md`}
                       required
                     >
                       <option value="">Select Class</option>
@@ -249,6 +449,9 @@ function Edit() {
                         <option key={grade} value={grade}>Class {grade}</option>
                       ))}
                     </select>
+                    {hasError('class') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('class')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -260,13 +463,17 @@ function Edit() {
                       name="section"
                       value={formData.section}
                       onChange={handleChange}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full pl-3 pr-10 py-2 text-base ${hasError('section') ? 'border-red-300' : 'border-gray-300'} focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md`}
                       required
                     >
                       {['A', 'B', 'C'].map(section => (
                         <option key={section} value={section}>Section {section}</option>
                       ))}
                     </select>
+                    {hasError('section') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('section')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -297,9 +504,13 @@ function Edit() {
                       id="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('dateOfBirth') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('dateOfBirth') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('dateOfBirth')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -354,9 +565,13 @@ function Edit() {
                       id="address.street"
                       value={formData.address.street}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('address.street') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('address.street') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('address.street')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
@@ -369,9 +584,13 @@ function Edit() {
                       id="address.postalCode"
                       value={formData.address.postalCode}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('address.postalCode') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('address.postalCode') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('address.postalCode')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -384,9 +603,13 @@ function Edit() {
                       id="address.city"
                       value={formData.address.city}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('address.city') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('address.city') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('address.city')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -399,9 +622,13 @@ function Edit() {
                       id="address.state"
                       value={formData.address.state}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('address.state') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('address.state') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('address.state')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -414,9 +641,13 @@ function Edit() {
                       id="address.country"
                       value={formData.address.country}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('address.country') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('address.country') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('address.country')}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -435,9 +666,13 @@ function Edit() {
                       id="parentDetails.fatherName"
                       value={formData.parentDetails.fatherName}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('parentDetails.fatherName') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('parentDetails.fatherName') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('parentDetails.fatherName')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -450,9 +685,13 @@ function Edit() {
                       id="parentDetails.motherName"
                       value={formData.parentDetails.motherName}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('parentDetails.motherName') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                     />
+                    {hasError('parentDetails.motherName') && (
+                      <p className="mt-1 text-sm text-red-600">{getError('parentDetails.motherName')}</p>
+                    )}
                   </div>
 
                   <div className="sm:col-span-3">
@@ -465,12 +704,17 @@ function Edit() {
                       id="parentDetails.contactNumber"
                       value={formData.parentDetails.contactNumber}
                       onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      onBlur={handleBlur}
+                      className={`mt-1 block w-full border ${hasError('parentDetails.contactNumber') ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
                       required
                       pattern="[0-9]{10}"
                       maxLength="10"
                     />
-                    <p className="mt-1 text-sm text-gray-500">10 digit mobile number</p>
+                    {hasError('parentDetails.contactNumber') ? (
+                      <p className="mt-1 text-sm text-red-600">{getError('parentDetails.contactNumber')}</p>
+                    ) : (
+                      <p className="mt-1 text-sm text-gray-500">10 digit mobile number</p>
+                    )}
                   </div>
                 </div>
               </div>

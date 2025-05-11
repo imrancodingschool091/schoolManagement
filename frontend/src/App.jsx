@@ -14,6 +14,10 @@ import Edit from "./ui/student/Edit";
 import Loading from "./common/Loding";
 import LibraryEdit from "./ui/library/LibraryEdit";
 import LibraryAdd from "./ui/library/LibraryAdd";
+import FeesAdd from "./ui/fees/FeesAdd";
+import FeesEdit from "./ui/fees/FeesEdit";
+import StaffsAdd from "./ui/staff/StaffsAdd";
+import StaffsEdit from "./ui/staff/StaffsEdit";
 
 // 👇 Example loader component (you can replace this with your own)
 const Loader = () => (
@@ -51,8 +55,15 @@ function App() {
         <Route path="/dashboard/admin/library/add" element={<LibraryAdd />} />
          <Route path="/dashboard/admin/library/edit/:id" element={<LibraryEdit />} />
          
-        <Route path="/dashboard/admin/staffs" element={<Staffs />} />
+       
         <Route path="/dashboard/admin/fees" element={<Fees />} />
+         <Route path="/dashboard/admin/fees/add" element={<FeesAdd />} />
+          <Route path="/dashboard/admin/fees/edit/:id" element={< FeesEdit/>} />
+
+         <Route path="/dashboard/admin/staff" element={<Staffs />} />
+          <Route path="/dashboard/admin/staff/add" element={<StaffsAdd />} />
+          <Route path="/dashboard/admin/staff/edit/:id" element={<StaffsEdit />} />
+
       </Routes>
 
       <ToastContainer />

@@ -114,7 +114,7 @@ const LibraryHistory = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {historyData.map((entry, index) => (
-                        <tr key={entry._id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <tr key={entry._id} className={index % 5 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="px-6 py-4 text-sm text-gray-500">{entry._id?.slice(0, 8) || 'N/A'}...</td>
                           <td className="px-6 py-4">
                             <div className="text-sm font-medium text-gray-900">
@@ -127,7 +127,7 @@ const LibraryHistory = () => {
                           <td className="px-6 py-4 text-sm text-gray-900">{entry.bookTitle || 'N/A'}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{formatDate(entry.issueDate)}</td>
                           <td className="px-6 py-4 text-sm text-gray-900">{formatDate(entry.returnDate)}</td>
-                            <td className="px-6 py-4 text-sm text-gray-900">{formatDate(entry.studentId?.name)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900">{formatDate(entry.studentId?.name)}</td>
 
 
 
