@@ -31,8 +31,8 @@ The School Management System is a web application designed to facilitate the man
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/RJRYT/school-management-system.git
-   cd school-management-system/server
+   git clone https://github.com/imrancodingschool091/schoolManagement
+   cd schoolManagement
     ```
 
 2. Install dependencies:
@@ -44,7 +44,7 @@ The School Management System is a web application designed to facilitate the man
 3. Create a `.env` file in the server directory with the following environment variables:
 
     ```plaintext
-    PORT=5000
+    PORT=3000
     MONGODB_URI=your_mongodb_connection_string
     JWT_SECRET=your_jwt_secret
     ```
@@ -72,7 +72,7 @@ The School Management System is a web application designed to facilitate the man
 3. Create a `.env` file in the `client` directory with the following environment variables:
 
     ```plaintext
-    REACT_APP_API_URL=http://localhost:5000/api
+    REACT_APP_API_URL=http://localhost:3000/api
     ```
 
 4. Start the React application:
@@ -85,19 +85,19 @@ The School Management System is a web application designed to facilitate the man
 
 ### Backend Deployment
 
-1. Deploy the backend on [Render](https://render.com).
+1. Deploy the backend on [Render]().
 
 2. Configure environment variables as specified above.
 
 ### Frontend Deployment
 
-1. Deploy the frontend on [Vercel](https://vercel.com).
+1. Deploy the frontend on [Vercel]().
 
 2. Set up the build settings and environment variables.
 
 ### Demo
 
-[vercel.com](https://school-management-system-rjryt.vercel.app)
+[vercel.com]()
 
 - admin account: admin@gmail.com 
 - password: admin
@@ -120,9 +120,7 @@ The School Management System is a web application designed to facilitate the man
 - redux
 - axios
 
-## Video Presentation
 
-[Youtube](https://youtu.be/pjWPNRGWVMY)
 
 ## License
 
