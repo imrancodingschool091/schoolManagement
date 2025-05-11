@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import cookieParser from 'cookie-parser'; // Important if you're using cookies
+import cookieParser from 'cookie-parser';
 import { connectDb } from './src/config/db.js';
 import { GlobalErrorMiddleware } from './src/middleware/err.middleware.js';
 import AuthRoutes from "./src/routes/auth.routes.js";
@@ -13,21 +13,28 @@ import UsersRoutes from "./src/routes/users.routes.js";
 
 dotenv.config();
 
-
 const app = express();
 
-// CORS Configuration
-app.use(cors())
+// Enhanced CORS Configuration
+const corsOptions = {
+  origin: 'https://schoolmanagement-kappa.vercel.app',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
+};
 
-app.use(cookieParser()); // Important if you send cookies
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable preflight for all routes
+
+app.use(cookieParser());
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("API is working...");
+});
 
-app.get("/",(req,res)=>{
-  res.send("api is working..")
-})
+connectDb();
 
-connectDb()
 // API Routes
 app.use("/api/auth", AuthRoutes);
 app.use("/api/fees", FeesRoutes);
