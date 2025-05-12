@@ -33,7 +33,7 @@ export const fetchStudentById = createAsyncThunk(
           'Authorization': `Bearer ${token}`  // Send token as Bearer token
         }
       });
-     return response.data.student || response.data;
+      return response.data.student;
     } catch (err) {
       return rejectWithValue(err.response.data);
     }
